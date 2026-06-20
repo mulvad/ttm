@@ -1,0 +1,28 @@
+# Example global configuration for TTM
+# Copy this to ~/.ttm/config.yaml
+
+environments:
+  # Semantic environments map to themes
+  production:
+    theme: danger
+  staging:
+    theme: caution
+  development:
+    theme: safe
+
+themes:
+  # Themes map to terminal profiles
+  danger:
+    profile: "Red Sands"
+  caution:
+    profile: "Ocean"
+  safe:
+    profile: "Grass"
+
+  # Direct themes (not tied to environments)
+  dark:
+    profile: "Pro"
+  light:
+    profile: "Basic"
+  retro:
+    profile: "Homebrew"

@@ -1,0 +1,4 @@
+# Semantic environment specification
+# Use this approach to indicate the project's environment type
+# The actual theme is resolved from your global config
+environment: production
