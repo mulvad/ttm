@@ -71,6 +71,12 @@ ttm current
 
 # Show the full resolution chain without applying
 ttm resolve
+
+# Export terminal profiles to a file
+ttm export -o profiles.yaml
+
+# Import terminal profiles from a file
+ttm import -i profiles.yaml
 ```
 
 ### Example Output
@@ -134,6 +140,49 @@ When you run `ttm apply`, the following resolution happens:
 3. **Resolve environment** (if applicable): Look up the environment in global config to get theme
 4. **Resolve theme**: Look up the theme in global config to get terminal profile name
 5. **Apply profile**: Use AppleScript to set the terminal profile
+
+## Profile Export/Import
+
+TTM can export and import terminal profiles for backup or sharing:
+
+```bash
+# Export all profiles
+ttm export -o my-profiles.yaml
+
+# Export specific profiles
+ttm export -o my-profiles.yaml -p "Pro" -p "Ocean"
+
+# Import profiles (creates new or updates existing)
+ttm import -i my-profiles.yaml
+
+# Import specific profiles
+ttm import -i my-profiles.yaml -p "Pro"
+```
+
+Exported format:
+
+```yaml
+profiles:
+  - name: Pro
+    background_color:
+      red: 0
+      green: 0
+      blue: 0
+    text_color:
+      red: 65535
+      green: 65535
+      blue: 65535
+    bold_text_color:
+      red: 65535
+      green: 65535
+      blue: 65535
+    cursor_color:
+      red: 35700
+      green: 35700
+      blue: 35700
+    font_name: Menlo-Regular
+    font_size: 12
+```
 
 ## Supported Terminals
 

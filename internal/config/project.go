@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -35,13 +36,18 @@ func LoadProjectProfile(path string) (*ProjectProfile, error) {
 
 	var profile ProjectProfile
 	if err := yaml.Unmarshal(data, &profile); err != nil {
-		return nil, fmt.Errorf("failed to parse project profile: %w", err)
+		content := strings.TrimSpace(string(data))
+		// Check if it looks like a plain string (no colon = no YAML key)
+		if !strings.Contains(content, ":") {
+			return nil, fmt.Errorf("invalid format in %s: found %q\n\nExpected format:\n  environment: <name>   # use semantic environment\n  theme: <name>         # use theme directly", path, content)
+		}
+		return nil, fmt.Errorf("failed to parse %s: %w", path, err)
 	}
 
 	profile.Path = path
 
 	if err := profile.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid project profile: %w", err)
+		return nil, fmt.Errorf("invalid project profile %s: %w", path, err)
 	}
 
 	return &profile, nil

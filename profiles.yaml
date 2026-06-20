@@ -1,0 +1,267 @@
+profiles:
+    - name: Red Sands
+      background_color:
+        red: 32767
+        green: 2
+        blue: 32767
+      text_color:
+        red: 52790
+        green: 48835
+        blue: 38687
+      bold_text_color:
+        red: 57343
+        green: 48521
+        blue: 8659
+      cursor_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Clear Dark
+      background_color:
+        red: 6447
+        green: 7462
+        blue: 10000
+      text_color:
+        red: 57514
+        green: 57514
+        blue: 57514
+      bold_text_color:
+        red: 60853
+        green: 60853
+        blue: 60853
+      cursor_color:
+        red: 35700
+        green: 35700
+        blue: 35700
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Silver Aerogel
+      background_color:
+        red: 32767
+        green: 32767
+        blue: 32767
+      text_color:
+        red: 0
+        green: 0
+        blue: 0
+      bold_text_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      cursor_color:
+        red: 55704
+        green: 55704
+        blue: 55704
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Solid Colors
+      background_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      text_color:
+        red: 0
+        green: 0
+        blue: 0
+      bold_text_color:
+        red: 0
+        green: 0
+        blue: 0
+      cursor_color:
+        red: 49151
+        green: 49151
+        blue: 49151
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Clear Light
+      background_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      text_color:
+        red: 11487
+        green: 14321
+        blue: 16345
+      bold_text_color:
+        red: 9429
+        green: 11756
+        blue: 13417
+      cursor_color:
+        red: 32606
+        green: 32606
+        blue: 32606
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Grass
+      background_color:
+        red: 5426
+        green: 26257
+        blue: 11961
+      text_color:
+        red: 65456
+        green: 61262
+        blue: 38176
+      bold_text_color:
+        red: 65046
+        green: 41332
+        blue: 11838
+      cursor_color:
+        red: 31289
+        green: 6804
+        blue: 512
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Homebrew
+      background_color:
+        red: 0
+        green: 0
+        blue: 0
+      text_color:
+        red: 12089
+        green: 65535
+        blue: 4651
+      bold_text_color:
+        red: 0
+        green: 65535
+        blue: 0
+      cursor_color:
+        red: 14422
+        green: 65535
+        blue: 7829
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Basic
+      background_color:
+        red: 5866
+        green: 5866
+        blue: 5866
+      text_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      bold_text_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      cursor_color:
+        red: 35700
+        green: 35700
+        blue: 35700
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: AWS Log
+      background_color:
+        red: 18497
+        green: 18497
+        blue: 18497
+      text_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      bold_text_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      cursor_color:
+        red: 35700
+        green: 35700
+        blue: 35700
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Novel
+      background_color:
+        red: 55372
+        green: 54249
+        blue: 46908
+      text_color:
+        red: 15281
+        green: 8874
+        blue: 8709
+      bold_text_color:
+        red: 32767
+        green: 10767
+        blue: 6497
+      cursor_color:
+        red: 11212
+        green: 6662
+        blue: 6597
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Ocean
+      background_color:
+        red: 8654
+        green: 20216
+        blue: 48438
+      text_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      bold_text_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      cursor_color:
+        red: 35700
+        green: 35700
+        blue: 35700
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Man Page
+      background_color:
+        red: 65175
+        green: 62663
+        blue: 35662
+      text_color:
+        red: 0
+        green: 0
+        blue: 0
+      bold_text_color:
+        red: 0
+        green: 0
+        blue: 0
+      cursor_color:
+        red: 35700
+        green: 35700
+        blue: 35700
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: Pro
+      background_color:
+        red: 0
+        green: 0
+        blue: 0
+      text_color:
+        red: 62099
+        green: 62099
+        blue: 62099
+      bold_text_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      cursor_color:
+        red: 19819
+        green: 19819
+        blue: 19819
+      font_name: MesloLGS-NF-Regular
+      font_size: 11
+    - name: TTM-Test-Profile
+      background_color:
+        red: 10000
+        green: 10000
+        blue: 30000
+      text_color:
+        red: 65535
+        green: 65535
+        blue: 65535
+      bold_text_color:
+        red: 65535
+        green: 65535
+        blue: 0
+      cursor_color:
+        red: 65535
+        green: 0
+        blue: 0
+      font_name: MesloLGS-NF-Regular
+      font_size: 10

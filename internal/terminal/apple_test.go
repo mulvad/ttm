@@ -224,3 +224,116 @@ func TestEscapeForAppleScript(t *testing.T) {
 		})
 	}
 }
+
+func TestParseColor(t *testing.T) {
+	tests := []struct {
+		input string
+		want  Color
+	}{
+		{"65535,0,0", Color{Red: 65535, Green: 0, Blue: 0}},
+		{"0, 65535, 0", Color{Red: 0, Green: 65535, Blue: 0}},
+		{"10000,20000,30000", Color{Red: 10000, Green: 20000, Blue: 30000}},
+		{"invalid", Color{}},
+		{"", Color{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := parseColor(tt.input)
+			if got != tt.want {
+				t.Errorf("parseColor(%q) = %+v, want %+v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAppleTerminal_ExportProfile(t *testing.T) {
+	runner := NewMockScriptRunner()
+	runner.SetOutput("settings set", `bg:5866,5866,5866
+fg:65535,65535,65535
+bold:65535,65535,65535
+cur:35700,35700,35700
+font:Menlo-Regular
+size:12`)
+	terminal := NewAppleTerminalWithRunner(runner)
+
+	profile, err := terminal.ExportProfile(context.Background(), "Basic")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if profile.Name != "Basic" {
+		t.Errorf("Name = %q, want 'Basic'", profile.Name)
+	}
+	if profile.BackgroundColor.Red != 5866 {
+		t.Errorf("BackgroundColor.Red = %d, want 5866", profile.BackgroundColor.Red)
+	}
+	if profile.TextColor.Red != 65535 {
+		t.Errorf("TextColor.Red = %d, want 65535", profile.TextColor.Red)
+	}
+	if profile.FontName != "Menlo-Regular" {
+		t.Errorf("FontName = %q, want 'Menlo-Regular'", profile.FontName)
+	}
+	if profile.FontSize != 12 {
+		t.Errorf("FontSize = %d, want 12", profile.FontSize)
+	}
+}
+
+func TestAppleTerminal_ExportProfile_Error(t *testing.T) {
+	runner := NewMockScriptRunner()
+	runner.SetError("settings set", errors.New("profile not found"))
+	terminal := NewAppleTerminalWithRunner(runner)
+
+	_, err := terminal.ExportProfile(context.Background(), "NonExistent")
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
+}
+
+func TestAppleTerminal_ImportProfile(t *testing.T) {
+	runner := NewMockScriptRunner()
+	terminal := NewAppleTerminalWithRunner(runner)
+
+	profile := &Profile{
+		Name:            "TestProfile",
+		BackgroundColor: Color{Red: 10000, Green: 20000, Blue: 30000},
+		TextColor:       Color{Red: 65535, Green: 65535, Blue: 65535},
+		BoldTextColor:   Color{Red: 65535, Green: 65535, Blue: 0},
+		CursorColor:     Color{Red: 65535, Green: 0, Blue: 0},
+		FontName:        "Menlo-Regular",
+		FontSize:        14,
+	}
+
+	err := terminal.ImportProfile(context.Background(), profile)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	script := runner.LastScript()
+	if !strings.Contains(script, "TestProfile") {
+		t.Errorf("script should contain profile name, got: %s", script)
+	}
+	if !strings.Contains(script, "10000, 20000, 30000") {
+		t.Errorf("script should contain background color, got: %s", script)
+	}
+	if !strings.Contains(script, "Menlo-Regular") {
+		t.Errorf("script should contain font name, got: %s", script)
+	}
+}
+
+func TestAppleTerminal_ImportProfile_Error(t *testing.T) {
+	runner := NewMockScriptRunner()
+	runner.SetError("settings set", errors.New("failed"))
+	terminal := NewAppleTerminalWithRunner(runner)
+
+	profile := &Profile{
+		Name:     "TestProfile",
+		FontName: "Menlo-Regular",
+		FontSize: 12,
+	}
+
+	err := terminal.ImportProfile(context.Background(), profile)
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
+}

@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -11,6 +12,7 @@ func TestLoadProjectProfile(t *testing.T) {
 		name    string
 		content string
 		wantErr bool
+		errMsg  string
 		check   func(t *testing.T, p *ProjectProfile)
 	}{
 		{
@@ -73,6 +75,18 @@ theme: dark
 			content: "invalid: yaml: content:",
 			wantErr: true,
 		},
+		{
+			name:    "plain string instead of yaml",
+			content: "Red Sands",
+			wantErr: true,
+			errMsg:  "invalid format",
+		},
+		{
+			name:    "plain string with newline",
+			content: "My Profile\n",
+			wantErr: true,
+			errMsg:  "Expected format",
+		},
 	}
 
 	for _, tt := range tests {
@@ -87,6 +101,11 @@ theme: dark
 			if (err != nil) != tt.wantErr {
 				t.Errorf("LoadProjectProfile() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+			if tt.wantErr && tt.errMsg != "" {
+				if !strings.Contains(err.Error(), tt.errMsg) {
+					t.Errorf("error should contain %q, got: %v", tt.errMsg, err)
+				}
 			}
 			if !tt.wantErr && tt.check != nil {
 				tt.check(t, profile)
