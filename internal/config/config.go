@@ -26,6 +26,9 @@ type Config struct {
 	// EnvironmentVariable is the name of the env var to check for auto-detection (e.g., "NODE_ENV")
 	EnvironmentVariable string `yaml:"environment_variable,omitempty"`
 
+	// DefaultProfile is the terminal profile to apply when no .terminal-profile is found
+	DefaultProfile string `yaml:"default_profile,omitempty"`
+
 	Environments map[string]EnvironmentConfig `yaml:"environments"`
 	Themes       map[string]ThemeConfig       `yaml:"themes"`
 }

@@ -33,6 +33,11 @@ Define your environments, themes, and optionally an environment variable for aut
 # Optional: detect environment from this env var (e.g., NODE_ENV, APP_ENV)
 environment_variable: NODE_ENV
 
+# Optional: fallback profile when no .terminal-profile is found
+# (TTM automatically remembers your original profile and restores it,
+# but you can set this as a fallback)
+default_profile: "Basic"
+
 environments:
   production:
     theme: prod

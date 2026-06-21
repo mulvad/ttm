@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/mulvad/ttm/internal/resolver"
 	"github.com/mulvad/ttm/internal/terminal"
@@ -76,9 +78,28 @@ func runApply(ctx context.Context, configPath string, deps *Deps, w io.Writer) e
 	}
 
 	if project == nil {
-		// No .terminal-profile found - clear any existing badge
+		// No .terminal-profile found - restore original profile if we have one
+		originalProfile, err := loadOriginalProfile()
+		if err == nil && originalProfile != "" {
+			if err := deps.Backend.ApplyProfile(ctx, originalProfile); err != nil {
+				return fmt.Errorf("failed to restore original profile: %w", err)
+			}
+			_, _ = fmt.Fprintf(w, "Restored profile: %s\n", originalProfile)
+		} else if cfg.DefaultProfile != "" {
+			// Fall back to configured default profile
+			if err := deps.Backend.ApplyProfile(ctx, cfg.DefaultProfile); err != nil {
+				return fmt.Errorf("failed to apply default profile: %w", err)
+			}
+			_, _ = fmt.Fprintf(w, "Applied default profile: %s\n", cfg.DefaultProfile)
+		}
+		// Clear any existing badge
 		_ = deps.Backend.SetWindowTitle(ctx, "")
 		return nil
+	}
+
+	// Store original profile before applying a new one (if not already stored)
+	if err := saveOriginalProfileIfNeeded(ctx, deps.Backend); err != nil {
+		_, _ = fmt.Fprintf(w, "Warning: failed to save original profile: %v\n", err)
 	}
 
 	// Resolve to terminal profile
@@ -104,6 +125,54 @@ func runApply(ctx context.Context, configPath string, deps *Deps, w io.Writer) e
 		_, _ = fmt.Fprintf(w, "Warning: failed to set window title: %v\n", err)
 	} else if resolution.Badge != "" {
 		_, _ = fmt.Fprintf(w, "Set badge: %s\n", resolution.Badge)
+	}
+
+	return nil
+}
+
+// originalProfilePath returns the path to the file storing the original profile.
+func originalProfilePath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".ttm", "original-profile"), nil
+}
+
+// loadOriginalProfile loads the stored original profile name.
+func loadOriginalProfile() (string, error) {
+	path, err := originalProfilePath()
+	if err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(data)), nil
+}
+
+// saveOriginalProfileIfNeeded saves the current profile as the original if not already saved.
+func saveOriginalProfileIfNeeded(ctx context.Context, backend Backend) error {
+	path, err := originalProfilePath()
+	if err != nil {
+		return err
+	}
+
+	// Check if already saved
+	if _, err := os.Stat(path); err == nil {
+		return nil // Already exists, don't overwrite
+	}
+
+	// Get current profile from terminal
+	currentProfile, err := backend.CurrentProfile(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get current profile: %w", err)
+	}
+
+	// Save it
+	if err := os.WriteFile(path, []byte(currentProfile), 0644); err != nil {
+		return fmt.Errorf("failed to save original profile: %w", err)
 	}
 
 	return nil
