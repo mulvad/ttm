@@ -31,9 +31,10 @@ using a three-layer architecture:
 3. Terminal-specific implementation - Apple Terminal profiles via AppleScript
 
 Example usage:
-  ttm apply    # Apply the terminal profile for the current project
+  ttm apply    # Apply the terminal theme for the current project
   ttm current  # Show current terminal and project status
   ttm resolve  # Show the full resolution chain without applying
+  ttm verify   # Verify your TTM setup is working correctly
   ttm export   # Export terminal profiles to a file
   ttm import   # Import terminal profiles from a file`,
 		Version: Version,

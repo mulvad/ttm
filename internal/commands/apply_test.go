@@ -201,7 +201,7 @@ func TestRunApply(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			err := runApply(context.Background(), tt.configPath, tt.deps, &buf)
+			err := runApply(context.Background(), tt.configPath, false, tt.deps, &buf)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("runApply() error = %v, wantErr %v", err, tt.wantErr)
@@ -248,7 +248,7 @@ func TestRunApply_SetsBadge(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runApply(context.Background(), "/test/config.yaml", deps, &buf)
+	err := runApply(context.Background(), "/test/config.yaml", false, deps, &buf)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -279,7 +279,7 @@ func TestRunApply_ClearsBadgeWhenNoBadge(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runApply(context.Background(), "/test/config.yaml", deps, &buf)
+	err := runApply(context.Background(), "/test/config.yaml", false, deps, &buf)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestRunApply_ClearsBadgeWhenNoProfile(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	err := runApply(context.Background(), "/test/config.yaml", deps, &buf)
+	err := runApply(context.Background(), "/test/config.yaml", false, deps, &buf)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -346,7 +346,7 @@ themes:
 		Getwd:         func() (string, error) { return projectDir, nil },
 	}
 
-	err := runApply(context.Background(), configPath, deps, &buf)
+	err := runApply(context.Background(), configPath, false, deps, &buf)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

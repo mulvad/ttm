@@ -17,25 +17,27 @@ import (
 // NewApplyCmd creates the apply command.
 func NewApplyCmd() *cobra.Command {
 	var configPath string
+	var verbose bool
 
 	cmd := &cobra.Command{
 		Use:   "apply",
-		Short: "Apply the terminal profile for the current project",
-		Long: `Apply resolves the terminal profile for the current directory
+		Short: "Apply the terminal theme for the current project",
+		Long: `Apply resolves the terminal theme for the current directory
 based on the .terminal-profile file and global configuration,
 then applies it to the terminal.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runApply(cmd.Context(), configPath, nil, os.Stdout)
+			return runApply(cmd.Context(), configPath, verbose, nil, os.Stdout)
 		},
 	}
 
 	cmd.Flags().StringVarP(&configPath, "config", "c", "", "path to config file (default: ~/.ttm/config.yaml)")
+	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "show detailed output")
 
 	return cmd
 }
 
 // runApply executes the apply command. If deps is nil, uses defaults.
-func runApply(ctx context.Context, configPath string, deps *Deps, w io.Writer) error {
+func runApply(ctx context.Context, configPath string, verbose bool, deps *Deps, w io.Writer) error {
 	if deps == nil {
 		deps = &Deps{}
 	}
@@ -82,15 +84,19 @@ func runApply(ctx context.Context, configPath string, deps *Deps, w io.Writer) e
 		originalProfile, err := loadOriginalProfile()
 		if err == nil && originalProfile != "" {
 			if err := deps.Backend.ApplyProfile(ctx, originalProfile); err != nil {
-				return fmt.Errorf("failed to restore original profile: %w", err)
+				return fmt.Errorf("failed to restore original theme: %w", err)
 			}
-			_, _ = fmt.Fprintf(w, "Restored profile: %s\n", originalProfile)
+			if verbose {
+				_, _ = fmt.Fprintf(w, "Restored default theme\n")
+			}
 		} else if cfg.DefaultProfile != "" {
 			// Fall back to configured default profile
 			if err := deps.Backend.ApplyProfile(ctx, cfg.DefaultProfile); err != nil {
-				return fmt.Errorf("failed to apply default profile: %w", err)
+				return fmt.Errorf("failed to apply default theme: %w", err)
 			}
-			_, _ = fmt.Fprintf(w, "Applied default profile: %s\n", cfg.DefaultProfile)
+			if verbose {
+				_, _ = fmt.Fprintf(w, "Applied default theme\n")
+			}
 		}
 		// Clear any existing badge
 		_ = deps.Backend.SetWindowTitle(ctx, "")
@@ -99,7 +105,9 @@ func runApply(ctx context.Context, configPath string, deps *Deps, w io.Writer) e
 
 	// Store original profile before applying a new one (if not already stored)
 	if err := saveOriginalProfileIfNeeded(ctx, deps.Backend); err != nil {
-		_, _ = fmt.Fprintf(w, "Warning: failed to save original profile: %v\n", err)
+		if verbose {
+			_, _ = fmt.Fprintf(w, "Warning: failed to save original theme: %v\n", err)
+		}
 	}
 
 	// Resolve to terminal profile
@@ -118,13 +126,19 @@ func runApply(ctx context.Context, configPath string, deps *Deps, w io.Writer) e
 		return err
 	}
 
-	_, _ = fmt.Fprintf(w, "Applied profile: %s\n", resolution.Profile)
+	if verbose {
+		if resolution.Environment != "" {
+			_, _ = fmt.Fprintf(w, "Applied environment: %s\n", resolution.Environment)
+		} else {
+			_, _ = fmt.Fprintf(w, "Applied theme\n")
+		}
+	}
 
 	// Set or clear window title badge
 	if err := deps.Backend.SetWindowTitle(ctx, resolution.Badge); err != nil {
-		_, _ = fmt.Fprintf(w, "Warning: failed to set window title: %v\n", err)
-	} else if resolution.Badge != "" {
-		_, _ = fmt.Fprintf(w, "Set badge: %s\n", resolution.Badge)
+		if verbose {
+			_, _ = fmt.Fprintf(w, "Warning: failed to set badge: %v\n", err)
+		}
 	}
 
 	return nil

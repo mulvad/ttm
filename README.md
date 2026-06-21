@@ -96,14 +96,20 @@ This lets you keep your preferred color scheme while still showing environment c
 ### Commands
 
 ```bash
-# Apply the terminal profile for the current project
+# Apply the terminal theme for the current project (silent by default)
 ttm apply
+
+# Apply with verbose output
+ttm apply -v
 
 # Show current terminal and project status
 ttm current
 
 # Show the full resolution chain without applying
 ttm resolve
+
+# Verify your TTM setup is working correctly
+ttm verify
 
 # Export terminal profiles to a file
 ttm export -o profiles.yaml
@@ -126,8 +132,10 @@ Resolution chain:
 Final profile: Red Sands
 
 $ ttm apply
-Applied profile: Red Sands
-Set badge: 🔴 PROD
+# (silent by default - theme is applied)
+
+$ ttm apply -v
+Applied environment: production
 ```
 
 **With auto-detection:**
@@ -159,9 +167,7 @@ POWERLEVEL9K_DISABLE_TERM_TITLE=true
 
 # TTM: Auto-apply terminal theme on directory change
 ttm_chpwd() {
-  if command -v ttm &> /dev/null; then
-    ttm apply 2>/dev/null
-  fi
+  ttm apply
 }
 
 autoload -U add-zsh-hook
@@ -181,9 +187,7 @@ export DISABLE_AUTO_TITLE="true"
 ttm_prompt_command() {
   if [[ "$TTM_PREV_PWD" != "$PWD" ]]; then
     TTM_PREV_PWD="$PWD"
-    if command -v ttm &> /dev/null; then
-      ttm apply 2>/dev/null
-    fi
+    ttm apply
   fi
 }
 
