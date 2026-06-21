@@ -3,6 +3,8 @@ package terminal
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -369,5 +371,117 @@ func TestAppleTerminal_ExportAllProfiles_ListError(t *testing.T) {
 	_, err := terminal.ExportAllProfiles(context.Background())
 	if err == nil {
 		t.Error("expected error, got nil")
+	}
+}
+
+func TestSetWindowTitle_WritesBadge(t *testing.T) {
+	// Create a temp directory to use as home
+	tmpDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", origHome) }()
+
+	// Create .ttm directory
+	ttmDir := filepath.Join(tmpDir, ".ttm")
+	if err := os.MkdirAll(ttmDir, 0755); err != nil {
+		t.Fatalf("failed to create .ttm dir: %v", err)
+	}
+
+	runner := NewMockScriptRunner()
+	terminal := NewAppleTerminalWithRunner(runner)
+
+	// Write a badge
+	err := terminal.SetWindowTitle(context.Background(), "PROD")
+	if err != nil {
+		t.Fatalf("SetWindowTitle() error = %v", err)
+	}
+
+	// Verify badge file was written
+	badgePath := filepath.Join(ttmDir, "badge")
+	data, err := os.ReadFile(badgePath)
+	if err != nil {
+		t.Fatalf("failed to read badge file: %v", err)
+	}
+
+	if string(data) != "PROD" {
+		t.Errorf("badge file content = %q, want %q", string(data), "PROD")
+	}
+
+	// Check file permissions
+	info, err := os.Stat(badgePath)
+	if err != nil {
+		t.Fatalf("failed to stat badge file: %v", err)
+	}
+	if info.Mode().Perm() != 0644 {
+		t.Errorf("badge file permissions = %o, want 0644", info.Mode().Perm())
+	}
+}
+
+func TestSetWindowTitle_ClearsBadge(t *testing.T) {
+	// Create a temp directory to use as home
+	tmpDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", origHome) }()
+
+	// Create .ttm directory with badge file
+	ttmDir := filepath.Join(tmpDir, ".ttm")
+	if err := os.MkdirAll(ttmDir, 0755); err != nil {
+		t.Fatalf("failed to create .ttm dir: %v", err)
+	}
+	badgePath := filepath.Join(ttmDir, "badge")
+	if err := os.WriteFile(badgePath, []byte("OLD_BADGE"), 0644); err != nil {
+		t.Fatalf("failed to write initial badge: %v", err)
+	}
+
+	runner := NewMockScriptRunner()
+	terminal := NewAppleTerminalWithRunner(runner)
+
+	// Clear the badge
+	err := terminal.SetWindowTitle(context.Background(), "")
+	if err != nil {
+		t.Fatalf("SetWindowTitle() error = %v", err)
+	}
+
+	// Verify badge file was removed
+	if _, err := os.Stat(badgePath); !os.IsNotExist(err) {
+		t.Errorf("badge file should be removed, but exists or other error: %v", err)
+	}
+}
+
+func TestSetWindowTitle_UpdatesBadge(t *testing.T) {
+	// Create a temp directory to use as home
+	tmpDir := t.TempDir()
+	origHome := os.Getenv("HOME")
+	_ = os.Setenv("HOME", tmpDir)
+	defer func() { _ = os.Setenv("HOME", origHome) }()
+
+	// Create .ttm directory with existing badge
+	ttmDir := filepath.Join(tmpDir, ".ttm")
+	if err := os.MkdirAll(ttmDir, 0755); err != nil {
+		t.Fatalf("failed to create .ttm dir: %v", err)
+	}
+	badgePath := filepath.Join(ttmDir, "badge")
+	if err := os.WriteFile(badgePath, []byte("OLD"), 0644); err != nil {
+		t.Fatalf("failed to write initial badge: %v", err)
+	}
+
+	runner := NewMockScriptRunner()
+	terminal := NewAppleTerminalWithRunner(runner)
+
+	// Update the badge
+	err := terminal.SetWindowTitle(context.Background(), "NEW")
+	if err != nil {
+		t.Fatalf("SetWindowTitle() error = %v", err)
+	}
+
+	// Verify badge file was updated
+	data, err := os.ReadFile(badgePath)
+	if err != nil {
+		t.Fatalf("failed to read badge file: %v", err)
+	}
+
+	if string(data) != "NEW" {
+		t.Errorf("badge file content = %q, want %q", string(data), "NEW")
 	}
 }

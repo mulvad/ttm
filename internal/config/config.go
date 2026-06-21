@@ -13,6 +13,7 @@ import (
 // EnvironmentConfig defines the theme mapping for a semantic environment.
 type EnvironmentConfig struct {
 	Theme string `yaml:"theme"`
+	Badge string `yaml:"badge,omitempty"` // Window title badge/prefix (e.g., "🔴 PROD")
 }
 
 // ThemeConfig defines a terminal profile mapping.
@@ -22,6 +23,9 @@ type ThemeConfig struct {
 
 // Config represents the global TTM configuration stored at ~/.ttm/config.yaml.
 type Config struct {
+	// EnvironmentVariable is the name of the env var to check for auto-detection (e.g., "NODE_ENV")
+	EnvironmentVariable string `yaml:"environment_variable,omitempty"`
+
 	Environments map[string]EnvironmentConfig `yaml:"environments"`
 	Themes       map[string]ThemeConfig       `yaml:"themes"`
 }
@@ -103,4 +107,33 @@ func (c *Config) GetEnvironmentTheme(envName string) (string, error) {
 		return "", fmt.Errorf("environment %q not found", envName)
 	}
 	return env.Theme, nil
+}
+
+// GetEnvironment returns the full environment config.
+func (c *Config) GetEnvironment(envName string) (*EnvironmentConfig, error) {
+	env, exists := c.Environments[envName]
+	if !exists {
+		return nil, fmt.Errorf("environment %q not found", envName)
+	}
+	return &env, nil
+}
+
+// DetectEnvironment checks the configured environment variable and returns the matching environment name.
+// Returns empty string if no env var is configured or the value doesn't match any environment.
+func (c *Config) DetectEnvironment() string {
+	if c.EnvironmentVariable == "" {
+		return ""
+	}
+
+	value := os.Getenv(c.EnvironmentVariable)
+	if value == "" {
+		return ""
+	}
+
+	// Check if the env var value matches any environment name
+	if _, exists := c.Environments[value]; exists {
+		return value
+	}
+
+	return ""
 }

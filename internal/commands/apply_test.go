@@ -19,6 +19,8 @@ type mockBackend struct {
 	appliedProfile string
 	applyErr       error
 	profiles       []string
+	windowTitle    string
+	setTitleErr    error
 }
 
 func (m *mockBackend) Name() string                    { return "Mock" }
@@ -41,6 +43,13 @@ func (m *mockBackend) ExportAllProfiles(ctx context.Context) ([]*terminal.Profil
 }
 func (m *mockBackend) ImportProfile(ctx context.Context, profile *terminal.Profile) error {
 	return nil
+}
+func (m *mockBackend) SetWindowTitle(ctx context.Context, title string) error {
+	m.windowTitle = title
+	return m.setTitleErr
+}
+func (m *mockBackend) GetWindowTitle(ctx context.Context) (string, error) {
+	return m.windowTitle, nil
 }
 
 // mockConfigLoader implements ConfigLoader for testing.
@@ -131,7 +140,7 @@ func TestRunApply(t *testing.T) {
 			errContains: "not available",
 		},
 		{
-			name:       "no project profile found",
+			name:       "no project profile found - clears badge silently",
 			configPath: "/test/config.yaml",
 			deps: &Deps{
 				Backend:       &mockBackend{available: true},
@@ -139,8 +148,7 @@ func TestRunApply(t *testing.T) {
 				ProfileFinder: &mockProfileFinder{profile: nil},
 				Getwd:         func() (string, error) { return "/project", nil },
 			},
-			wantErr:     true,
-			errContains: "no .terminal-profile found",
+			wantErr: false,
 		},
 		{
 			name:       "config load error",
@@ -213,6 +221,93 @@ func TestRunApply(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestRunApply_SetsBadge(t *testing.T) {
+	backend := &mockBackend{available: true}
+	deps := &Deps{
+		Backend: backend,
+		ConfigLoader: &mockConfigLoader{
+			config: &config.Config{
+				Environments: map[string]config.EnvironmentConfig{
+					"production": {Theme: "prod", Badge: "PROD"},
+				},
+				Themes: map[string]config.ThemeConfig{
+					"prod": {Profile: "Red Sands"},
+				},
+			},
+		},
+		ProfileFinder: &mockProfileFinder{
+			profile: &config.ProjectProfile{
+				Environment: "production",
+				Path:        "/project/.terminal-profile",
+			},
+		},
+		Getwd: func() (string, error) { return "/project", nil },
+	}
+
+	var buf bytes.Buffer
+	err := runApply(context.Background(), "/test/config.yaml", deps, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if backend.windowTitle != "PROD" {
+		t.Errorf("window title = %q, want %q", backend.windowTitle, "PROD")
+	}
+}
+
+func TestRunApply_ClearsBadgeWhenNoBadge(t *testing.T) {
+	backend := &mockBackend{available: true, windowTitle: "OLD_BADGE"}
+	deps := &Deps{
+		Backend: backend,
+		ConfigLoader: &mockConfigLoader{
+			config: &config.Config{
+				Themes: map[string]config.ThemeConfig{
+					"dev": {Profile: "Grass"},
+				},
+			},
+		},
+		ProfileFinder: &mockProfileFinder{
+			profile: &config.ProjectProfile{
+				Theme: "dev", // Using theme directly, no badge
+				Path:  "/project/.terminal-profile",
+			},
+		},
+		Getwd: func() (string, error) { return "/project", nil },
+	}
+
+	var buf bytes.Buffer
+	err := runApply(context.Background(), "/test/config.yaml", deps, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Badge should be cleared (empty string)
+	if backend.windowTitle != "" {
+		t.Errorf("window title should be cleared, got %q", backend.windowTitle)
+	}
+}
+
+func TestRunApply_ClearsBadgeWhenNoProfile(t *testing.T) {
+	backend := &mockBackend{available: true, windowTitle: "OLD_BADGE"}
+	deps := &Deps{
+		Backend:       backend,
+		ConfigLoader:  &mockConfigLoader{config: &config.Config{}},
+		ProfileFinder: &mockProfileFinder{profile: nil}, // No .terminal-profile found
+		Getwd:         func() (string, error) { return "/project", nil },
+	}
+
+	var buf bytes.Buffer
+	err := runApply(context.Background(), "/test/config.yaml", deps, &buf)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Badge should be cleared
+	if backend.windowTitle != "" {
+		t.Errorf("window title should be cleared, got %q", backend.windowTitle)
 	}
 }
 

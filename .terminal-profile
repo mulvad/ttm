@@ -1,4 +1,9 @@
 # Direct theme specification
+
 # Use this approach when you want a specific visual style
+
 # regardless of the project's environment type
-theme: retro
+
+environment: auto
+
+# theme: retro

@@ -1,0 +1,4 @@
+# Combined mode: environment for badge, explicit theme for styling
+# This lets you keep your preferred color scheme while showing environment context
+environment: production   # Gets badge from this (🔴 PROD)
+theme: dark               # But uses this theme (Pro profile)

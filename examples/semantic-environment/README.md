@@ -9,6 +9,7 @@ Use semantic environments when:
 - You want visual cues based on project risk level (production vs development)
 - You want consistent theming across similar project types
 - You want to change all production project themes by updating one config
+- You want window title badges showing the current environment
 
 ## How It Works
 
@@ -23,11 +24,13 @@ TTM resolves this through the three-layer architecture:
 ```
 .terminal-profile (environment: production)
         ↓
-config.yaml environments.production.theme → "danger"
+config.yaml environments.production
+        ↓
+theme: danger, badge: "🔴 PROD"
         ↓
 config.yaml themes.danger.profile
         ↓
-Terminal profile: "Red Sands"
+Terminal profile: "Red Sands" + Window title: "🔴 PROD - project"
 ```
 
 ## Benefits
@@ -35,6 +38,7 @@ Terminal profile: "Red Sands"
 1. **Semantic meaning**: "production" conveys intent, not just appearance
 2. **Centralized control**: Change all production themes in one place
 3. **Consistency**: All production projects share the same visual warning
+4. **Environment badges**: Window title shows which environment you're in
 
 ## Testing
 
@@ -56,7 +60,8 @@ To change the theme for all production projects, update your global config:
 ```yaml
 environments:
   production:
-    theme: danger  # Change this to any theme name
+    theme: danger       # Change this to any theme name
+    badge: "🔴 PROD"    # Customize the window title badge
 ```
 
 All projects with `environment: production` will now use the new theme.

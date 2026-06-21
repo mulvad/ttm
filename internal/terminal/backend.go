@@ -20,4 +20,10 @@ type Backend interface {
 
 	// ListProfiles returns a list of available profile names.
 	ListProfiles(ctx context.Context) ([]string, error)
+
+	// SetWindowTitle sets the window/tab title.
+	SetWindowTitle(ctx context.Context, title string) error
+
+	// GetWindowTitle returns the current window/tab title.
+	GetWindowTitle(ctx context.Context) (string, error)
 }

@@ -17,6 +17,8 @@ type Backend interface {
 	ExportProfile(ctx context.Context, name string) (*terminal.Profile, error)
 	ExportAllProfiles(ctx context.Context) ([]*terminal.Profile, error)
 	ImportProfile(ctx context.Context, profile *terminal.Profile) error
+	SetWindowTitle(ctx context.Context, title string) error
+	GetWindowTitle(ctx context.Context) (string, error)
 }
 
 // ConfigLoader loads configuration files.

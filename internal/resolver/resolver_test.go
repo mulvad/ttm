@@ -9,14 +9,14 @@ import (
 func TestResolver_Resolve(t *testing.T) {
 	cfg := &config.Config{
 		Environments: map[string]config.EnvironmentConfig{
-			"production": {Theme: "prod"},
-			"staging":    {Theme: "stage"},
+			"production":  {Theme: "prod", Badge: "🔴 PROD"},
+			"staging":     {Theme: "stage", Badge: "🟡 STAGE"},
 			"development": {Theme: "dev"},
 		},
 		Themes: map[string]config.ThemeConfig{
-			"prod":  {Profile: "Red Sands"},
-			"stage": {Profile: "Ocean"},
-			"dev":   {Profile: "Grass"},
+			"prod":   {Profile: "Red Sands"},
+			"stage":  {Profile: "Ocean"},
+			"dev":    {Profile: "Grass"},
 			"custom": {Profile: "Novel"},
 		},
 	}
@@ -25,6 +25,7 @@ func TestResolver_Resolve(t *testing.T) {
 		name        string
 		project     *config.ProjectProfile
 		wantProfile string
+		wantBadge   string
 		wantSteps   int
 		wantErr     bool
 	}{
@@ -35,6 +36,7 @@ func TestResolver_Resolve(t *testing.T) {
 				Path:        "/project/.terminal-profile",
 			},
 			wantProfile: "Red Sands",
+			wantBadge:   "🔴 PROD",
 			wantSteps:   4, // project -> environment -> theme -> profile
 			wantErr:     false,
 		},
@@ -45,7 +47,31 @@ func TestResolver_Resolve(t *testing.T) {
 				Path:  "/project/.terminal-profile",
 			},
 			wantProfile: "Novel",
+			wantBadge:   "",
 			wantSteps:   3, // project -> theme -> profile
+			wantErr:     false,
+		},
+		{
+			name: "both environment and theme - use explicit theme with env badge",
+			project: &config.ProjectProfile{
+				Environment: "production",
+				Theme:       "custom",
+				Path:        "/project/.terminal-profile",
+			},
+			wantProfile: "Novel",
+			wantBadge:   "🔴 PROD",
+			wantSteps:   4, // project -> environment (badge only) -> theme -> profile
+			wantErr:     false,
+		},
+		{
+			name: "environment without badge",
+			project: &config.ProjectProfile{
+				Environment: "development",
+				Path:        "/project/.terminal-profile",
+			},
+			wantProfile: "Grass",
+			wantBadge:   "",
+			wantSteps:   4,
 			wantErr:     false,
 		},
 		{
@@ -89,8 +115,117 @@ func TestResolver_Resolve(t *testing.T) {
 				t.Errorf("Resolve() profile = %q, want %q", res.Profile, tt.wantProfile)
 			}
 
+			if res.Badge != tt.wantBadge {
+				t.Errorf("Resolve() badge = %q, want %q", res.Badge, tt.wantBadge)
+			}
+
 			if len(res.Steps) != tt.wantSteps {
 				t.Errorf("Resolve() steps = %d, want %d", len(res.Steps), tt.wantSteps)
+			}
+		})
+	}
+}
+
+func TestResolver_Resolve_AutoEnvironment(t *testing.T) {
+	cfg := &config.Config{
+		EnvironmentVariable: "APP_ENV",
+		Environments: map[string]config.EnvironmentConfig{
+			"production": {Theme: "prod", Badge: "🔴 PROD"},
+			"staging":    {Theme: "stage", Badge: "🟡 STAGE"},
+		},
+		Themes: map[string]config.ThemeConfig{
+			"prod":  {Profile: "Red Sands"},
+			"stage": {Profile: "Ocean"},
+		},
+	}
+
+	tests := []struct {
+		name        string
+		envValue    string
+		project     *config.ProjectProfile
+		wantProfile string
+		wantBadge   string
+		wantErr     bool
+	}{
+		{
+			name:     "auto detects production",
+			envValue: "production",
+			project: &config.ProjectProfile{
+				Environment: "auto",
+				Path:        "/project/.terminal-profile",
+			},
+			wantProfile: "Red Sands",
+			wantBadge:   "🔴 PROD",
+			wantErr:     false,
+		},
+		{
+			name:     "auto detects staging",
+			envValue: "staging",
+			project: &config.ProjectProfile{
+				Environment: "auto",
+				Path:        "/project/.terminal-profile",
+			},
+			wantProfile: "Ocean",
+			wantBadge:   "🟡 STAGE",
+			wantErr:     false,
+		},
+		{
+			name:     "auto with explicit theme override",
+			envValue: "production",
+			project: &config.ProjectProfile{
+				Environment: "auto",
+				Theme:       "stage",
+				Path:        "/project/.terminal-profile",
+			},
+			wantProfile: "Ocean",     // Uses explicit theme
+			wantBadge:   "🔴 PROD",   // But gets badge from detected env
+			wantErr:     false,
+		},
+		{
+			name:     "auto fails when env var not set",
+			envValue: "",
+			project: &config.ProjectProfile{
+				Environment: "auto",
+				Path:        "/project/.terminal-profile",
+			},
+			wantErr: true,
+		},
+		{
+			name:     "auto fails when env var value not in config",
+			envValue: "unknown",
+			project: &config.ProjectProfile{
+				Environment: "auto",
+				Path:        "/project/.terminal-profile",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set env var for test
+			if tt.envValue != "" {
+				t.Setenv("APP_ENV", tt.envValue)
+			}
+
+			resolver := NewResolver(cfg)
+			res, err := resolver.Resolve(tt.project)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Resolve() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr {
+				return
+			}
+
+			if res.Profile != tt.wantProfile {
+				t.Errorf("Resolve() profile = %q, want %q", res.Profile, tt.wantProfile)
+			}
+
+			if res.Badge != tt.wantBadge {
+				t.Errorf("Resolve() badge = %q, want %q", res.Badge, tt.wantBadge)
 			}
 		})
 	}
@@ -189,7 +324,7 @@ func TestResolver_ResolveProfile(t *testing.T) {
 func TestResolution_StepDetails(t *testing.T) {
 	cfg := &config.Config{
 		Environments: map[string]config.EnvironmentConfig{
-			"production": {Theme: "prod"},
+			"production": {Theme: "prod", Badge: "🔴 PROD"},
 		},
 		Themes: map[string]config.ThemeConfig{
 			"prod": {Profile: "Red Sands"},
@@ -224,7 +359,9 @@ func TestResolution_StepDetails(t *testing.T) {
 	if res.Steps[1].Key != "production" {
 		t.Errorf("Environment step key = %q, want 'production'", res.Steps[1].Key)
 	}
-	if res.Steps[1].Value != "prod" {
-		t.Errorf("Environment step value = %q, want 'prod'", res.Steps[1].Value)
+
+	// Verify badge is in resolution
+	if res.Badge != "🔴 PROD" {
+		t.Errorf("Resolution badge = %q, want '🔴 PROD'", res.Badge)
 	}
 }

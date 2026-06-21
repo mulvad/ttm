@@ -70,11 +70,22 @@ func escapeForAppleScript(s string) string {
 }
 
 // ApplyProfile applies the given terminal profile to the current window.
+// It also disables Terminal.app's built-in title components so that
+// only shell escape sequences control the window/tab title.
 func (a *AppleTerminal) ApplyProfile(ctx context.Context, profile string) error {
 	escapedProfile := escapeForAppleScript(profile)
 	script := fmt.Sprintf(`
 tell application "Terminal"
 	set current settings of front window to settings set "%s"
+
+	-- Enable custom title (shows escape sequence title), disable all other title components
+	tell current settings of front window
+		set title displays custom title to true
+		set title displays device name to false
+		set title displays shell path to false
+		set title displays window size to false
+		set title displays settings name to false
+	end tell
 end tell
 `, escapedProfile)
 
@@ -95,6 +106,54 @@ end tell
 	output, err := a.runner.Run(ctx, script)
 	if err != nil {
 		return "", fmt.Errorf("failed to get current profile: %w", err)
+	}
+	return output, nil
+}
+
+// SetWindowTitle sets the window/tab title via AppleScript.
+// It also writes the badge to ~/.ttm/badge for shell integration scripts.
+func (a *AppleTerminal) SetWindowTitle(ctx context.Context, title string) error {
+	// Write badge to file for shell integration scripts that may want it
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to get home directory: %w", err)
+	}
+
+	badgePath := home + "/.ttm/badge"
+	if title == "" {
+		_ = os.Remove(badgePath)
+	} else {
+		if err := os.WriteFile(badgePath, []byte(title), 0644); err != nil {
+			return fmt.Errorf("failed to write badge file: %w", err)
+		}
+	}
+
+	// Set Terminal.app's custom title directly
+	escapedTitle := escapeForAppleScript(title)
+	script := fmt.Sprintf(`
+tell application "Terminal"
+	set custom title of front window to "%s"
+end tell
+`, escapedTitle)
+
+	_, err = a.runner.Run(ctx, script)
+	if err != nil {
+		return fmt.Errorf("failed to set window title: %w", err)
+	}
+
+	return nil
+}
+
+// GetWindowTitle returns the current window/tab title.
+func (a *AppleTerminal) GetWindowTitle(ctx context.Context) (string, error) {
+	script := `
+tell application "Terminal"
+	custom title of front window
+end tell
+`
+	output, err := a.runner.Run(ctx, script)
+	if err != nil {
+		return "", fmt.Errorf("failed to get window title: %w", err)
 	}
 	return output, nil
 }

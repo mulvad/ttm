@@ -1,0 +1,4 @@
+# Auto-detect environment from configured env var (e.g., NODE_ENV)
+# TTM reads the environment_variable setting from your global config
+# and matches its value against your environments
+environment: auto

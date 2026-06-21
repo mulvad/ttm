@@ -13,15 +13,23 @@ import (
 // It is stored in a .terminal-profile file at the project root.
 type ProjectProfile struct {
 	// Environment specifies the semantic environment (e.g., "production", "staging").
-	// Mutually exclusive with Theme.
+	// Use "auto" to detect from the configured environment variable.
+	// When used alone, the theme is resolved from the environment config.
+	// Can be combined with Theme to get environment badge + explicit theme.
 	Environment string `yaml:"environment,omitempty"`
 
-	// Theme specifies the theme directly, bypassing environment resolution.
-	// Mutually exclusive with Environment.
+	// Theme specifies the theme directly.
+	// When used alone, bypasses environment resolution.
+	// Can be combined with Environment to use explicit theme + environment badge.
 	Theme string `yaml:"theme,omitempty"`
 
 	// Path stores the file path where this profile was loaded from.
 	Path string `yaml:"-"`
+}
+
+// UsesAutoEnvironment returns true if environment is set to "auto".
+func (p *ProjectProfile) UsesAutoEnvironment() bool {
+	return p.Environment == "auto"
 }
 
 // ProfileFileName is the name of the project profile file.
@@ -54,17 +62,14 @@ func LoadProjectProfile(path string) (*ProjectProfile, error) {
 }
 
 // Validate checks that the project profile is valid.
-// It ensures exactly one of Environment or Theme is set.
+// It ensures at least one of Environment or Theme is set.
+// Both can be set together (environment for badge, theme for styling).
 func (p *ProjectProfile) Validate() error {
 	hasEnv := p.Environment != ""
 	hasTheme := p.Theme != ""
 
 	if !hasEnv && !hasTheme {
-		return errors.New("project profile must specify either 'environment' or 'theme'")
-	}
-
-	if hasEnv && hasTheme {
-		return errors.New("project profile cannot specify both 'environment' and 'theme'")
+		return errors.New("project profile must specify 'environment', 'theme', or both")
 	}
 
 	return nil

@@ -76,12 +76,14 @@ func runApply(ctx context.Context, configPath string, deps *Deps, w io.Writer) e
 	}
 
 	if project == nil {
-		return fmt.Errorf("no .terminal-profile found in %s or any parent directory", cwd)
+		// No .terminal-profile found - clear any existing badge
+		_ = deps.Backend.SetWindowTitle(ctx, "")
+		return nil
 	}
 
 	// Resolve to terminal profile
 	res := resolver.NewResolver(cfg)
-	profile, err := res.ResolveProfile(project)
+	resolution, err := res.Resolve(project)
 	if err != nil {
 		return fmt.Errorf("failed to resolve profile: %w", err)
 	}
@@ -91,10 +93,18 @@ func runApply(ctx context.Context, configPath string, deps *Deps, w io.Writer) e
 		return fmt.Errorf("terminal backend not available")
 	}
 
-	if err := deps.Backend.ApplyProfile(ctx, profile); err != nil {
+	if err := deps.Backend.ApplyProfile(ctx, resolution.Profile); err != nil {
 		return err
 	}
 
-	_, _ = fmt.Fprintf(w, "Applied profile: %s\n", profile)
+	_, _ = fmt.Fprintf(w, "Applied profile: %s\n", resolution.Profile)
+
+	// Set or clear window title badge
+	if err := deps.Backend.SetWindowTitle(ctx, resolution.Badge); err != nil {
+		_, _ = fmt.Fprintf(w, "Warning: failed to set window title: %v\n", err)
+	} else if resolution.Badge != "" {
+		_, _ = fmt.Fprintf(w, "Set badge: %s\n", resolution.Badge)
+	}
+
 	return nil
 }

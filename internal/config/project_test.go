@@ -58,7 +58,21 @@ func TestLoadProjectProfile(t *testing.T) {
 			content: `environment: production
 theme: dark
 `,
-			wantErr: true,
+			wantErr: false,
+			check: func(t *testing.T, p *ProjectProfile) {
+				if p.Environment != "production" {
+					t.Errorf("expected environment 'production', got %q", p.Environment)
+				}
+				if p.Theme != "dark" {
+					t.Errorf("expected theme 'dark', got %q", p.Theme)
+				}
+				if !p.UsesEnvironment() {
+					t.Error("expected UsesEnvironment() to be true")
+				}
+				if !p.UsesTheme() {
+					t.Error("expected UsesTheme() to be true")
+				}
+			},
 		},
 		{
 			name:    "neither environment nor theme",

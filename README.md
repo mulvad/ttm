@@ -27,16 +27,22 @@ make install
 
 ### Global Config (`~/.ttm/config.yaml`)
 
-Define your environments and themes:
+Define your environments, themes, and optionally an environment variable for auto-detection:
 
 ```yaml
+# Optional: detect environment from this env var (e.g., NODE_ENV, APP_ENV)
+environment_variable: NODE_ENV
+
 environments:
   production:
     theme: prod
+    badge: "🔴 PROD"    # Optional: sets window title
   staging:
     theme: stage
+    badge: "🟡 STAGE"
   development:
     theme: dev
+    badge: "🟢 DEV"
 
 themes:
   prod:
@@ -49,19 +55,36 @@ themes:
 
 ### Project Config (`.terminal-profile`)
 
-Place a `.terminal-profile` file in your project root. You can specify either an environment or a theme directly:
+Place a `.terminal-profile` file in your project root. Multiple modes are supported:
 
-**Using environment:**
+**Mode 1: Using environment (theme + badge from config)**
 
 ```yaml
 environment: production
 ```
 
-**Using theme directly:**
+**Mode 2: Using theme directly (no badge)**
 
 ```yaml
 theme: prod
 ```
+
+**Mode 3: Auto-detect from environment variable**
+
+```yaml
+environment: auto
+```
+
+When set to `auto`, TTM reads the configured `environment_variable` (e.g., `NODE_ENV`) and matches its value against your environments.
+
+**Mode 4: Combined (explicit theme + badge from environment)**
+
+```yaml
+environment: production   # Gets badge from this
+theme: dev                # But uses this theme
+```
+
+This lets you keep your preferred color scheme while still showing environment context in the window title.
 
 ## Usage
 
@@ -91,7 +114,25 @@ $ ttm resolve
 Resolution chain:
 
 ├── [project] /Users/me/myproject/.terminal-profile → environment: production
-├── [environment] production → prod
+├── [environment] production → theme: prod, badge: 🔴 PROD
+├── [theme] prod → prod
+└── [profile] prod → Red Sands
+
+Final profile: Red Sands
+
+$ ttm apply
+Applied profile: Red Sands
+Set badge: 🔴 PROD
+```
+
+**With auto-detection:**
+
+```bash
+$ NODE_ENV=production ttm resolve
+Resolution chain:
+
+├── [project] /Users/me/myproject/.terminal-profile → environment: auto → production
+├── [environment] production → theme: prod, badge: 🔴 PROD
 ├── [theme] prod → prod
 └── [profile] prod → Red Sands
 
@@ -105,6 +146,12 @@ To automatically change terminal profiles when changing directories, add this to
 ### Zsh (`~/.zshrc`)
 
 ```zsh
+# Disable oh-my-zsh auto title (required for TTM title management)
+export DISABLE_AUTO_TITLE="true"
+
+# If using Powerlevel10k, also disable its title management
+POWERLEVEL9K_DISABLE_TERM_TITLE=true
+
 # TTM: Auto-apply terminal theme on directory change
 ttm_chpwd() {
   if command -v ttm &> /dev/null; then
@@ -112,7 +159,6 @@ ttm_chpwd() {
   fi
 }
 
-# Add to chpwd hooks
 autoload -U add-zsh-hook
 add-zsh-hook chpwd ttm_chpwd
 
@@ -123,6 +169,9 @@ ttm_chpwd
 ### Bash (`~/.bashrc`)
 
 ```bash
+# Disable auto title (required for TTM title management)
+export DISABLE_AUTO_TITLE="true"
+
 # TTM: Auto-apply terminal theme on directory change
 ttm_prompt_command() {
   if [[ "$TTM_PREV_PWD" != "$PWD" ]]; then

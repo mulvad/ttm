@@ -1,14 +1,20 @@
 # Example global configuration for TTM
 # Copy this to ~/.ttm/config.yaml
 
+# Auto-detect environment from this env var (optional)
+environment_variable: NODE_ENV
+
 environments:
-  # Semantic environments map to themes
+  # Semantic environments map to themes and can have badges
   production:
     theme: danger
+    badge: "🔴 PROD"
   staging:
     theme: caution
+    badge: "🟡 STAGE"
   development:
     theme: safe
+    badge: "🟢 DEV"
 
 themes:
   # Themes map to terminal profiles

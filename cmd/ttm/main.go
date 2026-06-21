@@ -45,6 +45,7 @@ Example usage:
 	rootCmd.AddCommand(commands.NewResolveCmd())
 	rootCmd.AddCommand(commands.NewExportCmd())
 	rootCmd.AddCommand(commands.NewImportCmd())
+	rootCmd.AddCommand(commands.NewVerifyCmd())
 
 	return rootCmd.Execute()
 }
