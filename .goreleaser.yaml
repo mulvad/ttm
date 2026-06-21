@@ -1,0 +1,63 @@
+version: 2
+
+project_name: ttm
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: ttm
+    main: ./cmd/ttm
+    binary: ttm
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+
+archives:
+  - id: ttm
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+brews:
+  - name: ttm
+    repository:
+      owner: mulvad
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/mulvad/ttm"
+    description: "Terminal Theme Manager - manage terminal themes based on project context"
+    license: "MIT"
+    install: |
+      bin.install "ttm"
+    test: |
+      system "#{bin}/ttm", "--version"
+
+release:
+  github:
+    owner: mulvad
+    name: ttm
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"
