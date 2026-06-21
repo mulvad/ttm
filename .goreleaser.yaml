@@ -43,18 +43,16 @@ changelog:
 
 homebrew_casks:
   - name: ttm
+    binaries:
+      - ttm
+    homepage: "https://github.com/mulvad/ttm"
+    description: "Terminal Theme Manager - manage terminal themes based on project context"
     repository:
       owner: mulvad
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
-    directory: Formula
-    homepage: "https://github.com/mulvad/ttm"
-    description: "Terminal Theme Manager - manage terminal themes based on project context"
-    license: "MIT"
-    install: |
-      bin.install "ttm"
-    test: |
-      system "#{bin}/ttm", "--version"
+    directory: Casks
+    commit_msg_template: "Update {{ .ProjectName }} to {{ .Tag }}"
 
 release:
   github:
