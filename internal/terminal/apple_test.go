@@ -337,3 +337,37 @@ func TestAppleTerminal_ImportProfile_Error(t *testing.T) {
 		t.Error("expected error, got nil")
 	}
 }
+
+func TestAppleTerminal_ExportAllProfiles(t *testing.T) {
+	runner := NewMockScriptRunner()
+	// First call lists profiles
+	runner.SetOutput("settings sets", "Basic\nPro")
+	// Subsequent calls export each profile
+	runner.SetOutput("theSettings", `bg:0,0,0
+fg:65535,65535,65535
+bold:65535,65535,65535
+cur:35700,35700,35700
+font:Menlo-Regular
+size:12`)
+	terminal := NewAppleTerminalWithRunner(runner)
+
+	profiles, err := terminal.ExportAllProfiles(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(profiles) != 2 {
+		t.Errorf("expected 2 profiles, got %d", len(profiles))
+	}
+}
+
+func TestAppleTerminal_ExportAllProfiles_ListError(t *testing.T) {
+	runner := NewMockScriptRunner()
+	runner.SetError("settings sets", errors.New("failed to list"))
+	terminal := NewAppleTerminalWithRunner(runner)
+
+	_, err := terminal.ExportAllProfiles(context.Background())
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
+}

@@ -2,9 +2,9 @@ package commands
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/mulvad/ttm/internal/config"
 	"github.com/mulvad/ttm/internal/resolver"
 	"github.com/spf13/cobra"
 )
@@ -22,7 +22,7 @@ to terminal profile without actually applying any changes.
 This is useful for debugging and understanding how ttm resolves
 the terminal profile for the current project.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runResolve(configPath)
+			return runResolve(configPath, nil, os.Stdout)
 		},
 	}
 
@@ -31,29 +31,41 @@ the terminal profile for the current project.`,
 	return cmd
 }
 
-func runResolve(configPath string) error {
+func runResolve(configPath string, deps *Deps, w io.Writer) error {
+	if deps == nil {
+		deps = &Deps{}
+	}
+	if deps.ConfigLoader == nil {
+		deps.ConfigLoader = DefaultConfigLoader{}
+	}
+	if deps.ProfileFinder == nil {
+		deps.ProfileFinder = resolver.NewFinder(nil)
+	}
+	if deps.Getwd == nil {
+		deps.Getwd = os.Getwd
+	}
+
 	// Load global config
 	if configPath == "" {
 		var err error
-		configPath, err = config.DefaultConfigPath()
+		configPath, err = deps.ConfigLoader.DefaultConfigPath()
 		if err != nil {
 			return err
 		}
 	}
 
-	cfg, err := config.LoadConfig(configPath)
+	cfg, err := deps.ConfigLoader.LoadConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	// Find project profile
-	cwd, err := os.Getwd()
+	cwd, err := deps.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	finder := resolver.NewFinder(nil)
-	project, err := finder.FindAndLoadProfile(cwd)
+	project, err := deps.ProfileFinder.FindAndLoadProfile(cwd)
 	if err != nil {
 		return fmt.Errorf("failed to load project profile: %w", err)
 	}
@@ -69,19 +81,19 @@ func runResolve(configPath string) error {
 		return fmt.Errorf("failed to resolve profile: %w", err)
 	}
 
-	fmt.Println("Resolution chain:")
-	fmt.Println()
+	_, _ = fmt.Fprintln(w, "Resolution chain:")
+	_, _ = fmt.Fprintln(w)
 
 	for i, step := range resolution.Steps {
 		prefix := "├──"
 		if i == len(resolution.Steps)-1 {
 			prefix = "└──"
 		}
-		fmt.Printf("%s [%s] %s → %s\n", prefix, step.Type, step.Key, step.Value)
+		_, _ = fmt.Fprintf(w, "%s [%s] %s → %s\n", prefix, step.Type, step.Key, step.Value)
 	}
 
-	fmt.Println()
-	fmt.Printf("Final profile: %s\n", resolution.Profile)
+	_, _ = fmt.Fprintln(w)
+	_, _ = fmt.Fprintf(w, "Final profile: %s\n", resolution.Profile)
 
 	return nil
 }

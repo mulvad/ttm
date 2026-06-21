@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/mulvad/ttm/internal/terminal"
@@ -26,7 +27,7 @@ Examples:
   ttm export -o profiles.yaml              # Export all profiles
   ttm export -o my.yaml -p "Pro" -p "Basic" # Export specific profiles`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runExport(cmd.Context(), outputPath, profileNames)
+			return runExport(cmd.Context(), outputPath, profileNames, nil, os.Stdout, nil)
 		},
 	}
 
@@ -36,10 +37,22 @@ Examples:
 	return cmd
 }
 
-func runExport(ctx context.Context, outputPath string, profileNames []string) error {
-	backend := terminal.NewAppleTerminal()
-	if !backend.Available() {
-		return fmt.Errorf("Apple Terminal backend not available")
+// FileWriter writes data to a file. Used for testing.
+type FileWriter func(path string, data []byte, perm os.FileMode) error
+
+func runExport(ctx context.Context, outputPath string, profileNames []string, deps *Deps, w io.Writer, writeFile FileWriter) error {
+	if deps == nil {
+		deps = &Deps{}
+	}
+	if deps.Backend == nil {
+		deps.Backend = terminal.NewAppleTerminal()
+	}
+	if writeFile == nil {
+		writeFile = os.WriteFile
+	}
+
+	if !deps.Backend.Available() {
+		return fmt.Errorf("terminal backend not available")
 	}
 
 	var profiles []*terminal.Profile
@@ -47,22 +60,22 @@ func runExport(ctx context.Context, outputPath string, profileNames []string) er
 
 	if len(profileNames) == 0 {
 		// Export all profiles
-		profiles, err = backend.ExportAllProfiles(ctx)
+		profiles, err = deps.Backend.ExportAllProfiles(ctx)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Exporting %d profiles...\n", len(profiles))
+		_, _ = fmt.Fprintf(w, "Exporting %d profiles...\n", len(profiles))
 	} else {
 		// Export specific profiles
 		profiles = make([]*terminal.Profile, 0, len(profileNames))
 		for _, name := range profileNames {
-			profile, err := backend.ExportProfile(ctx, name)
+			profile, err := deps.Backend.ExportProfile(ctx, name)
 			if err != nil {
 				return err
 			}
 			profiles = append(profiles, profile)
 		}
-		fmt.Printf("Exporting %d profiles...\n", len(profiles))
+		_, _ = fmt.Fprintf(w, "Exporting %d profiles...\n", len(profiles))
 	}
 
 	// Write to file
@@ -71,10 +84,10 @@ func runExport(ctx context.Context, outputPath string, profileNames []string) er
 		return fmt.Errorf("failed to marshal profiles: %w", err)
 	}
 
-	if err := os.WriteFile(outputPath, data, 0644); err != nil {
+	if err := writeFile(outputPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
-	fmt.Printf("Exported to %s\n", outputPath)
+	_, _ = fmt.Fprintf(w, "Exported to %s\n", outputPath)
 	return nil
 }

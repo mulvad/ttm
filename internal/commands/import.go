@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/mulvad/ttm/internal/terminal"
@@ -31,7 +32,7 @@ Examples:
   ttm import -i profiles.yaml              # Import all profiles from file
   ttm import -i my.yaml -p "Pro" -p "Basic" # Import specific profiles`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runImport(cmd.Context(), inputPath, profileNames)
+			return runImport(cmd.Context(), inputPath, profileNames, nil, os.Stdout, nil)
 		},
 	}
 
@@ -41,14 +42,26 @@ Examples:
 	return cmd
 }
 
-func runImport(ctx context.Context, inputPath string, profileNames []string) error {
-	backend := terminal.NewAppleTerminal()
-	if !backend.Available() {
-		return fmt.Errorf("Apple Terminal backend not available")
+// FileReader reads data from a file. Used for testing.
+type FileReader func(path string) ([]byte, error)
+
+func runImport(ctx context.Context, inputPath string, profileNames []string, deps *Deps, w io.Writer, readFile FileReader) error {
+	if deps == nil {
+		deps = &Deps{}
+	}
+	if deps.Backend == nil {
+		deps.Backend = terminal.NewAppleTerminal()
+	}
+	if readFile == nil {
+		readFile = os.ReadFile
+	}
+
+	if !deps.Backend.Available() {
+		return fmt.Errorf("terminal backend not available")
 	}
 
 	// Read file
-	data, err := os.ReadFile(inputPath)
+	data, err := readFile(inputPath)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
@@ -83,15 +96,15 @@ func runImport(ctx context.Context, inputPath string, profileNames []string) err
 		}
 	}
 
-	fmt.Printf("Importing %d profiles...\n", len(profilesToImport))
+	_, _ = fmt.Fprintf(w, "Importing %d profiles...\n", len(profilesToImport))
 
 	for _, profile := range profilesToImport {
-		if err := backend.ImportProfile(ctx, profile); err != nil {
+		if err := deps.Backend.ImportProfile(ctx, profile); err != nil {
 			return err
 		}
-		fmt.Printf("  Imported: %s\n", profile.Name)
+		_, _ = fmt.Fprintf(w, "  Imported: %s\n", profile.Name)
 	}
 
-	fmt.Println("Done!")
+	_, _ = fmt.Fprintln(w, "Done!")
 	return nil
 }
