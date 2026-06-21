@@ -22,9 +22,9 @@ func main() {
 func run() error {
 	rootCmd := &cobra.Command{
 		Use:   "ttm",
-		Short: "Terminal Theme Manager - manage terminal themes based on project context",
-		Long: `TTM (Terminal Theme Manager) is a CLI utility that manages terminal themes
-based on project context using a three-layer architecture:
+		Short: "ttm (Terminal Theme Manager) - manage terminal themes based on project context",
+		Long: `ttm (Terminal Theme Manager) manages terminal themes based on project context
+using a three-layer architecture:
 
 1. Project metadata (.terminal-profile) - Per-project YAML config
 2. Semantic environment mapping - Maps environments to themes
