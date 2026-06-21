@@ -20,11 +20,15 @@ builds:
       - arm64
     ldflags:
       - -s -w -X main.Version={{.Version}}
+    hooks:
+      post:
+        - cmd: sh -c '[ -n "$APPLE_SIGNING_IDENTITY" ] && codesign --sign "$APPLE_SIGNING_IDENTITY" --options runtime --timestamp "{{ .Path }}" || echo "Skipping codesign (no identity)"'
+          output: true
 
 archives:
   - id: ttm
     formats:
-      - tar.gz
+      - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - README.md

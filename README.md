@@ -8,11 +8,16 @@ TTM is a CLI utility that manages terminal themes based on project context using
 
 ## Installation
 
-```bash
-# From source
-go install github.com/mulvad/ttm/cmd/ttm@latest
+### Homebrew (Recommended)
 
-# Or build locally
+```bash
+brew tap mulvad/tap
+brew install --cask ttm
+```
+
+### Build from Source
+
+```bash
 git clone https://github.com/mulvad/ttm.git
 cd ttm
 make install
