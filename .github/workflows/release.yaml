@@ -54,8 +54,19 @@ jobs:
           # Allow codesign to access the keychain
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
+          # Debug: List all identities
+          echo "Available signing identities:"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
           # Find and export signing identity
-          SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" | grep "Developer ID Application" | head -1 | sed -E 's/.*"(.*)".*/\1/')
+
+          if [ -z "$SIGNING_IDENTITY" ]; then
+            echo "ERROR: No Developer ID Application certificate found!"
+            echo "Make sure you exported the correct certificate (Developer ID Application, not Apple Development)"
+            exit 1
+          fi
+
           echo "APPLE_SIGNING_IDENTITY=$SIGNING_IDENTITY" >> $GITHUB_ENV
           echo "Found signing identity: $SIGNING_IDENTITY"
 
@@ -79,14 +90,26 @@ jobs:
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
+          # Verify credentials are set
+          if [ -z "$APPLE_ID" ] || [ -z "$APPLE_ID_PASSWORD" ] || [ -z "$APPLE_TEAM_ID" ]; then
+            echo "ERROR: Missing Apple credentials. Check GitHub secrets:"
+            echo "  - APPLE_ID (your Apple ID email)"
+            echo "  - APPLE_ID_PASSWORD (app-specific password from appleid.apple.com)"
+            echo "  - APPLE_TEAM_ID (10-character team ID)"
+            exit 1
+          fi
+
           # Find and notarize each zip archive
           for archive in dist/*.zip; do
             if [ -f "$archive" ]; then
               echo "Notarizing $archive..."
+              echo "Using Apple ID: $APPLE_ID"
+              echo "Using Team ID: $APPLE_TEAM_ID"
               xcrun notarytool submit "$archive" \
                 --apple-id "$APPLE_ID" \
                 --password "$APPLE_ID_PASSWORD" \
                 --team-id "$APPLE_TEAM_ID" \
-                --wait
+                --wait \
+                --verbose
             fi
           done
