@@ -159,9 +159,9 @@ func saveOriginalProfileIfNeeded(ctx context.Context, backend Backend) error {
 		return err
 	}
 
-	// Check if already saved
-	if _, err := os.Stat(path); err == nil {
-		return nil // Already exists, don't overwrite
+	// Check if already saved (and non-empty)
+	if data, err := os.ReadFile(path); err == nil && strings.TrimSpace(string(data)) != "" {
+		return nil // Already exists with content, don't overwrite
 	}
 
 	// Get current profile from terminal
