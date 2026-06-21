@@ -8,6 +8,7 @@ before:
 
 builds:
   - id: ttm
+    dir: .
     main: ./cmd/ttm
     binary: ttm
     env:
@@ -22,7 +23,8 @@ builds:
 
 archives:
   - id: ttm
-    format: tar.gz
+    formats:
+      - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
       - README.md
@@ -39,7 +41,7 @@ changelog:
       - "^test:"
       - "^chore:"
 
-brews:
+homebrew:
   - name: ttm
     repository:
       owner: mulvad

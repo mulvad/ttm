@@ -17,5 +17,8 @@ go.work.sum
 # General
 .DS_Store
 
-# Binary
-ttm
+# Binary (only at root, not cmd/ttm/)
+/ttm
+
+# Test artifacts
+/profiles.yaml
