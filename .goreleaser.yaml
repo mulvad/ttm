@@ -41,7 +41,7 @@ changelog:
       - "^test:"
       - "^chore:"
 
-brews:
+homebrew_casks:
   - name: ttm
     repository:
       owner: mulvad
