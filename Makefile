@@ -1,4 +1,4 @@
-.PHONY: build test clean install lint
+.PHONY: build test clean install lint bump-major bump-minor bump-patch
 
 # Build variables
 BINARY_NAME=ttm
@@ -43,3 +43,13 @@ lint:
 release:
 	GOOS=darwin GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-darwin-amd64 ./cmd/ttm
 	GOOS=darwin GOARCH=arm64 $(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME)-darwin-arm64 ./cmd/ttm
+
+# Bump version (major, minor, patch)
+bump-major:
+	./scripts/bump-version.sh major
+
+bump-minor:
+	./scripts/bump-version.sh minor
+
+bump-patch:
+	./scripts/bump-version.sh patch

@@ -31,12 +31,14 @@ using a three-layer architecture:
 3. Terminal-specific implementation - Apple Terminal profiles via AppleScript
 
 Example usage:
-  ttm apply    # Apply the terminal theme for the current project
-  ttm current  # Show current terminal and project status
-  ttm resolve  # Show the full resolution chain without applying
-  ttm verify   # Verify your TTM setup is working correctly
-  ttm export   # Export terminal profiles to a file
-  ttm import   # Import terminal profiles from a file`,
+  ttm apply        # Apply the terminal theme for the current project
+  ttm current      # Show current terminal and project status
+  ttm resolve      # Show the full resolution chain without applying
+  ttm themes       # List all available themes
+  ttm environments # List all available environments
+  ttm verify       # Verify your TTM setup is working correctly
+  ttm export       # Export terminal profiles to a file
+  ttm import       # Import terminal profiles from a file`,
 		Version: Version,
 	}
 
@@ -44,6 +46,8 @@ Example usage:
 	rootCmd.AddCommand(commands.NewApplyCmd())
 	rootCmd.AddCommand(commands.NewCurrentCmd())
 	rootCmd.AddCommand(commands.NewResolveCmd())
+	rootCmd.AddCommand(commands.NewThemesCmd())
+	rootCmd.AddCommand(commands.NewEnvironmentsCmd())
 	rootCmd.AddCommand(commands.NewExportCmd())
 	rootCmd.AddCommand(commands.NewImportCmd())
 	rootCmd.AddCommand(commands.NewVerifyCmd())

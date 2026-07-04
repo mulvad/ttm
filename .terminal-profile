@@ -5,5 +5,4 @@
 # regardless of the project's environment type
 
 environment: auto
-
-# theme: retro
+theme: safe

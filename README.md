@@ -108,6 +108,12 @@ ttm current
 # Show the full resolution chain without applying
 ttm resolve
 
+# List all available themes
+ttm themes
+
+# List all available environments
+ttm environments
+
 # Verify your TTM setup is working correctly
 ttm verify
 
@@ -199,10 +205,37 @@ PROMPT_COMMAND="ttm_prompt_command${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
 When you run `ttm apply`, the following resolution happens:
 
 1. **Find project profile**: Walk up the directory tree to find `.terminal-profile`
-2. **Load project config**: Parse the YAML to get environment or theme
-3. **Resolve environment** (if applicable): Look up the environment in global config to get theme
-4. **Resolve theme**: Look up the theme in global config to get terminal profile name
-5. **Apply profile**: Use AppleScript to set the terminal profile
+2. **Load project config**: Parse the YAML to get environment and/or theme
+3. **Resolve environment** (if applicable): Look up the environment in global config to get theme and badge
+4. **Determine final theme**:
+   - If explicit `theme` is specified → use it (explicit theme wins)
+   - Otherwise → use environment's theme
+5. **Resolve theme**: Look up the theme in global config to get terminal profile name
+6. **Apply profile**: Use AppleScript to set the terminal profile
+
+### Resolution Order (Precedence)
+
+When both `environment` and `theme` are specified in `.terminal-profile`:
+
+```yaml
+environment: emacs  # Gets badge from here
+theme: safe         # Gets profile from here (theme wins)
+```
+
+The resolution follows this precedence:
+1. **Explicit theme** wins over environment's theme (but environment's badge is used)
+2. **Environment badge** is always used if environment is specified
+3. **Auto-detection** works: `environment: auto` detects the env var and applies the same rules
+
+**Examples:**
+
+| Config | EDITOR | Result |
+|--------|--------|--------|
+| `environment: emacs` | - | Theme from emacs env, badge 🟢 EMACS |
+| `theme: safe` | - | Theme safe, no badge |
+| `environment: emacs`<br>`theme: safe` | - | Theme safe (explicit wins), badge 🟢 EMACS |
+| `environment: auto` | emacs | Theme from emacs env, badge 🟢 EMACS |
+| `environment: auto`<br>`theme: safe` | emacs | Theme safe (explicit wins), badge 🟢 EMACS (from env) |
 
 ## Profile Export/Import
 
