@@ -27,7 +27,8 @@ func (OSAScriptRunner) Run(ctx context.Context, script string) (string, error) {
 		}
 		return "", err
 	}
-	return strings.TrimSpace(string(output)), nil
+	// osascript adds a newline. Preserve whitespace inside values such as custom titles.
+	return strings.TrimSuffix(string(output), "\n"), nil
 }
 
 // AppleTerminal implements Backend for macOS Terminal.app.
@@ -70,22 +71,12 @@ func escapeForAppleScript(s string) string {
 }
 
 // ApplyProfile applies the given terminal profile to the current window.
-// It also disables Terminal.app's built-in title components so that
-// only shell escape sequences control the window/tab title.
+// The profile's title preferences are preserved.
 func (a *AppleTerminal) ApplyProfile(ctx context.Context, profile string) error {
 	escapedProfile := escapeForAppleScript(profile)
 	script := fmt.Sprintf(`
 tell application "Terminal"
 	set current settings of front window to settings set "%s"
-
-	-- Enable custom title (shows escape sequence title), disable all other title components
-	tell current settings of front window
-		set title displays custom title to true
-		set title displays device name to false
-		set title displays shell path to false
-		set title displays window size to false
-		set title displays settings name to false
-	end tell
 end tell
 `, escapedProfile)
 
@@ -128,13 +119,26 @@ func (a *AppleTerminal) SetWindowTitle(ctx context.Context, title string) error 
 		}
 	}
 
-	// Set Terminal.app's custom title directly
-	escapedTitle := escapeForAppleScript(title)
-	script := fmt.Sprintf(`
+	// Badges override the active tab's title, without changing the profile.
+	// Clearing a badge restores the profile's custom title and visibility.
+	script := `
 tell application "Terminal"
-	set custom title of front window to "%s"
+	tell selected tab of front window
+		set custom title to custom title of current settings
+		set title displays custom title to title displays custom title of current settings
+	end tell
 end tell
-`, escapedTitle)
+`
+	if title != "" {
+		script = fmt.Sprintf(`
+tell application "Terminal"
+	tell selected tab of front window
+		set custom title to "%s"
+		set title displays custom title to true
+	end tell
+end tell
+`, escapeForAppleScript(title))
+	}
 
 	_, err = a.runner.Run(ctx, script)
 	if err != nil {
@@ -196,13 +200,32 @@ type Color struct {
 
 // Profile represents an exportable terminal profile.
 type Profile struct {
-	Name            string `yaml:"name"`
-	BackgroundColor Color  `yaml:"background_color"`
-	TextColor       Color  `yaml:"text_color"`
-	BoldTextColor   Color  `yaml:"bold_text_color"`
-	CursorColor     Color  `yaml:"cursor_color"`
-	FontName        string `yaml:"font_name"`
-	FontSize        int    `yaml:"font_size"`
+	Name            string          `yaml:"name"`
+	BackgroundColor Color           `yaml:"background_color"`
+	TextColor       Color           `yaml:"text_color"`
+	BoldTextColor   Color           `yaml:"bold_text_color"`
+	CursorColor     Color           `yaml:"cursor_color"`
+	FontName        string          `yaml:"font_name"`
+	FontSize        int             `yaml:"font_size"`
+	Window          *WindowSettings `yaml:"window,omitempty"`
+	Title           *TitleSettings  `yaml:"title,omitempty"`
+}
+
+// WindowSettings contains optional profile dimensions. Nil fields leave settings unchanged.
+type WindowSettings struct {
+	Rows    *int `yaml:"rows,omitempty"`
+	Columns *int `yaml:"columns,omitempty"`
+}
+
+// TitleSettings controls the title components exposed by Terminal's scripting API.
+// Pointers distinguish omitted values from explicit false or an empty custom title.
+type TitleSettings struct {
+	Custom          *string `yaml:"custom,omitempty"`
+	ShowCustom      *bool   `yaml:"show_custom,omitempty"`
+	ShowDeviceName  *bool   `yaml:"show_device_name,omitempty"`
+	ShowShellPath   *bool   `yaml:"show_shell_path,omitempty"`
+	ShowWindowSize  *bool   `yaml:"show_window_size,omitempty"`
+	ShowProfileName *bool   `yaml:"show_profile_name,omitempty"`
 }
 
 // ExportProfile exports a single profile's settings.
@@ -224,7 +247,16 @@ tell application "Terminal"
 	set theOutput to theOutput & "bold:" & (item 1 of boldColor) & "," & (item 2 of boldColor) & "," & (item 3 of boldColor) & linefeed
 	set theOutput to theOutput & "cur:" & (item 1 of curColor) & "," & (item 2 of curColor) & "," & (item 3 of curColor) & linefeed
 	set theOutput to theOutput & "font:" & theFont & linefeed
-	set theOutput to theOutput & "size:" & theSize
+	set theOutput to theOutput & "size:" & theSize & linefeed
+	set theOutput to theOutput & "rows:" & (number of rows of theSettings) & linefeed
+	set theOutput to theOutput & "columns:" & (number of columns of theSettings) & linefeed
+	set theOutput to theOutput & "show_custom:" & (title displays custom title of theSettings) & linefeed
+	set theOutput to theOutput & "show_device_name:" & (title displays device name of theSettings) & linefeed
+	set theOutput to theOutput & "show_shell_path:" & (title displays shell path of theSettings) & linefeed
+	set theOutput to theOutput & "show_window_size:" & (title displays window size of theSettings) & linefeed
+	set theOutput to theOutput & "show_profile_name:" & (title displays settings name of theSettings) & linefeed
+	-- Custom title is last: it can contain colons, whitespace, and newlines.
+	set theOutput to theOutput & "custom:" & (custom title of theSettings)
 	theOutput
 end tell
 `, escapedName)
@@ -235,6 +267,11 @@ end tell
 	}
 
 	profile := &Profile{Name: name}
+	// Separate the final, free-form field before parsing the line-based values.
+	if before, custom, ok := strings.Cut(output, "\ncustom:"); ok {
+		profile.Title = &TitleSettings{Custom: &custom}
+		output = before
+	}
 	for _, line := range strings.Split(output, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
@@ -260,6 +297,39 @@ end tell
 		case "size":
 			if size, err := strconv.Atoi(value); err == nil {
 				profile.FontSize = size
+			}
+		case "rows", "columns":
+			n, err := strconv.Atoi(value)
+			if err != nil || n <= 0 {
+				return nil, fmt.Errorf("invalid %s in exported profile %q: %q", key, name, value)
+			}
+			if profile.Window == nil {
+				profile.Window = &WindowSettings{}
+			}
+			if key == "rows" {
+				profile.Window.Rows = &n
+			} else {
+				profile.Window.Columns = &n
+			}
+		case "show_custom", "show_device_name", "show_shell_path", "show_window_size", "show_profile_name":
+			b, err := strconv.ParseBool(value)
+			if err != nil {
+				return nil, fmt.Errorf("invalid %s in exported profile %q: %q", key, name, value)
+			}
+			if profile.Title == nil {
+				profile.Title = &TitleSettings{}
+			}
+			switch key {
+			case "show_custom":
+				profile.Title.ShowCustom = &b
+			case "show_device_name":
+				profile.Title.ShowDeviceName = &b
+			case "show_shell_path":
+				profile.Title.ShowShellPath = &b
+			case "show_window_size":
+				profile.Title.ShowWindowSize = &b
+			case "show_profile_name":
+				profile.Title.ShowProfileName = &b
 			}
 		}
 	}
@@ -300,6 +370,13 @@ func (a *AppleTerminal) ExportAllProfiles(ctx context.Context) ([]*Profile, erro
 
 // ImportProfile imports a profile, creating or updating it.
 func (a *AppleTerminal) ImportProfile(ctx context.Context, profile *Profile) error {
+	if profile == nil {
+		return fmt.Errorf("profile must not be null")
+	}
+	extra, err := profileSettingsScript(profile)
+	if err != nil {
+		return err
+	}
 	escapedName := escapeForAppleScript(profile.Name)
 	escapedFont := escapeForAppleScript(profile.FontName)
 
@@ -309,7 +386,7 @@ tell application "Terminal"
 	try
 		set s to settings set "%s"
 	on error
-		-- Create new profile by duplicating first one and renaming
+		-- Create a fresh profile when the name does not exist
 		set s to make new settings set with properties {name:"%s"}
 	end try
 
@@ -319,6 +396,7 @@ tell application "Terminal"
 	set cursor color of s to {%d, %d, %d}
 	set font name of s to "%s"
 	set font size of s to %d
+%s
 end tell
 `,
 		escapedName, escapedName,
@@ -326,13 +404,49 @@ end tell
 		profile.TextColor.Red, profile.TextColor.Green, profile.TextColor.Blue,
 		profile.BoldTextColor.Red, profile.BoldTextColor.Green, profile.BoldTextColor.Blue,
 		profile.CursorColor.Red, profile.CursorColor.Green, profile.CursorColor.Blue,
-		escapedFont, profile.FontSize,
+		escapedFont, profile.FontSize, extra,
 	)
 
-	_, err := a.runner.Run(ctx, script)
+	_, err = a.runner.Run(ctx, script)
 	if err != nil {
 		return fmt.Errorf("failed to import profile %q: %w", profile.Name, err)
 	}
 
 	return nil
+}
+
+// profileSettingsScript validates and emits only explicitly supplied optional settings.
+func profileSettingsScript(profile *Profile) (string, error) {
+	var script strings.Builder
+	if w := profile.Window; w != nil {
+		for _, field := range []struct {
+			name  string
+			value *int
+		}{{"rows", w.Rows}, {"columns", w.Columns}} {
+			if field.value == nil {
+				continue
+			}
+			if *field.value <= 0 {
+				return "", fmt.Errorf("window.%s must be positive", field.name)
+			}
+			fmt.Fprintf(&script, "\tset number of %s of s to %d\n", field.name, *field.value)
+		}
+	}
+	if t := profile.Title; t != nil {
+		if t.Custom != nil {
+			fmt.Fprintf(&script, "\tset custom title of s to \"%s\"\n", escapeForAppleScript(*t.Custom))
+		}
+		for _, field := range []struct {
+			name  string
+			value *bool
+		}{
+			{"custom title", t.ShowCustom}, {"device name", t.ShowDeviceName},
+			{"shell path", t.ShowShellPath}, {"window size", t.ShowWindowSize}, {"settings name", t.ShowProfileName},
+		} {
+			if field.value != nil {
+				fmt.Fprintf(&script, "\tset title displays %s of s to %t\n", field.name, *field.value)
+			}
+		}
+	}
+	return script.String(), nil
 }

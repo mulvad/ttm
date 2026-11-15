@@ -60,6 +60,12 @@ theme: dark               # But uses this theme
 
 Resolution: `environment (badge only) + explicit theme → profile`
 
+### 5. [Profile Sync](./profile-sync/)
+
+Keep exported Terminal profiles in your dotfiles repository and import them at
+shell startup on each Mac. Includes a reusable Zsh snippet and instructions for
+syncing profile updates between computers.
+
 ## Comparison
 
 | Approach         | Use Case                          | Badge | Theme Control       |

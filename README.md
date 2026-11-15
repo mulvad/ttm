@@ -278,7 +278,53 @@ profiles:
       blue: 35700
     font_name: Menlo-Regular
     font_size: 12
+    window:
+      rows: 40
+      columns: 120
+    title:
+      custom: "Development"
+      show_custom: true
+      show_device_name: false
+      show_shell_path: false
+      show_window_size: false
+      show_profile_name: false
 ```
+
+The optional `window` and `title` sections control the profile properties exposed
+by Terminal's AppleScript API. Rows and columns must be positive integers. Omitted
+fields leave existing settings unchanged; explicit `false` disables a title
+component, and `custom: ""` clears the profile's custom title. Existing YAML files
+without these sections continue to work. These sections do not cover every option
+in Terminal's Window and Tab settings panels.
+
+Terminal couples custom-title visibility to its text: setting `show_custom: false`
+also clears the custom title through its scripting API, even when `custom` is
+omitted. If both are supplied, `show_custom: false` takes precedence.
+
+Dimensions are profile defaults for new windows and tabs; importing a profile does
+not explicitly resize existing windows. `ttm apply` preserves the profile's title
+components. An environment badge temporarily overrides the active tab's custom
+title and enables its display, while leaving the other title components alone.
+Clearing the badge restores the profile's custom title and its display preference.
+
+To import managed profiles at each interactive Terminal shell startup, place this
+in `~/.zshrc` after PATH configuration and before the TTM auto-apply setup:
+
+```zsh
+if [[ "$TERM_PROGRAM" == "Apple_Terminal" ]] &&
+   command -v ttm >/dev/null 2>&1 &&
+   [[ -r "$HOME/.ttm/profiles.yaml" ]]; then
+  ttm import -i "$HOME/.ttm/profiles.yaml" >/dev/null
+fi
+```
+
+Each startup imports all profiles in that file, updating profiles with matching
+names. Errors remain visible. YAML export/import carries colors, font settings,
+and the size/title fields above; it does not preserve the full native profile.
+
+For a shared setup across Macs, see the [profile sync example](examples/profile-sync/README.md).
+It includes a reusable startup script, a dotfiles workflow, and instructions for
+sharing later changes without overwriting unsaved profile edits.
 
 ## Supported Terminals
 
@@ -303,6 +349,16 @@ make build
 # Install to GOPATH
 make install
 ```
+
+To check profile export/import against a real Terminal.app on macOS:
+
+```bash
+TTM_TERMINAL_INTEGRATION=1 go test ./internal/terminal -run TestProfileSettingsTerminalIntegration -v
+```
+
+This opt-in test creates a temporary profile, checks its size and title settings
+and saved preferences, then deletes it. macOS may request permission to control
+Terminal.
 
 ### Test changes are working without creating a new release
 
